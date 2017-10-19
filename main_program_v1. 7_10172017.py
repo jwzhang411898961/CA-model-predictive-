@@ -257,7 +257,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
     SIDX[liquid_nuc_idx[:, 0], liquid_nuc_idx[:, 1]] = 0 # 05022017 added
     
     """Remelt grain nucleation. 10182017 added"""
-    if i > first_layer:
+    if File_seq > first_layer:
         haz_idx = np.argwhere(REMELT == 2)
         for ii in haz_idx:
             r_remelt = abs(math.sin(random.random()))
