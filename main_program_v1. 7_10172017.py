@@ -34,7 +34,7 @@ Integral_coefficient_s = 100.0, Integral_coefficient_v = 250.0
 09262017: the problem may exist in for j, four_idx in enumerate(neighvertices_global_idx) part. It feels like that some grains donot stop and always keep enclosing more cells.
 10012017 created from v1.4
 10012017 created from v1.5 to redesign remelt.
-10172017 created from v1.6 to redesign remelt and use git to control.
+10172017 created from v1.6 to redesign remelt and use git to control. Only one file is needed for different versions. hh
 """
 
 import numpy as np
@@ -255,6 +255,51 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
     liquid_nuc_idx = np.argwhere(TempInterpolateT >= TempADJ)
     CLASS[liquid_nuc_idx[:, 0], liquid_nuc_idx[:, 1]] = -1
     SIDX[liquid_nuc_idx[:, 0], liquid_nuc_idx[:, 1]] = 0 # 05022017 added
+    
+    """Remelt grain nucleation. 10182017 added"""
+    haz_idx = np.argwhere(REMELT == 2)
+    for ii in haz_idx:
+        r_remelt = abs(math.sin(random.random()))
+        if CLASS[ii[0], ii[1] + 1] == -1 and CLASS[ii[0], ii[1] - 1] == -1 and CLASS[ii[0] + 1, ii[1]] == -1 and CLASS[ii[0] - 1, ii[1]] == -1 and CLASS[ii[0] + 1, ii[1] + 1] == -1 and CLASS[ii[0] - 1, ii[1] + 1] == -1 and CLASS[ii[0] + 1, ii[1] - 1] == -1 and CLASS[ii[0] - 1, ii[1] - 1] == -1:
+            PV_remelt = Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient_v, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient_v, 1.32, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+            CLASS_block = CLASS[ii[0] - 3:ii[0] + 3, ii[1] - 3:ii[1] + 3] # two nucleation center cannot be too close. The distance is at least 6 cell.
+            if r_remelt <= PV_remelt and np.all(CLASS_block == -1):
+                DTNUCL[i,j] = 10 # it nucleats in the bulk liquid.
+                NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
+                _NUCINC = int(0 if _NUCINC is None else _NUCINC)
+                _NUCINC += 1 # Record how many 
+                CLASS[i,j] = random.randint(0,49)
+#                CLASS[i, j] = CLASS2[i, j] if  CLASS2[i, j] > 0 else CLASS[i,j] # 10102017 added
+                SIDX[i,j] = 1 # become solid because of nucleation
+                ANGLE[i,j] = (CLASS[i,j]*90/48.0 - 45) * PI / 180.0
+                NUCIDX[i,j] = _NUCINC # the NUCINCth grain
+                DTSQ = min((_Temp_Liquid - TempInterpolateT[i,j])**2, DTSQLIM)
+                Vtip = .729*DTSQ + .0103 * DTSQ**2
+                TIPLEN[i,j] = -1*Vtip * DTIME / math.sqrt(2.0)
+        else:
+            PS_remelt = Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+            if r_remelt <= PS_remelt:
+                DTNUCL[i,j] = 5 # it nucleats at the S/L surface
+                NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
+                _NUCINC = int(0 if _NUCINC is None else _NUCINC)
+                _NUCINC += 1 # Record how many nucleations
+                CLASS[i,j] = random.randint(0,49)
+#                    CLASS[i, j] = CLASS2[i, j] if  CLASS2[i, j] > 0 else CLASS[i,j] # 10102017 added
+                a = [CLASS[i + 1, j], CLASS[i - 1, j], CLASS[i, j + 1], CLASS[i, j - 1]]               
+                CLASS_interface = a[min(range(len(a)), key=lambda i: abs(a[i] - Class_mean))] # prescribe the CLASS of interface cell when nucleation. This is to look for which neighbouring cell is solid. find i where abs(a[i] - Class_mean) is minimum. min() returns a number within range(len(a)). simulate epitaxial growth.
+                if CLASS_interface > 0:
+                    CLASS[i,j] =  CLASS_interface
+#                    print "CLASS[{0},{1}] = ".format(i, j), CLASS[i, j], ", which is formed in the Nucleation surface."
+                ANGLE[i,j] = (CLASS[i,j]*90/48.0 - 45) * PI / 180.0
+                SIDX[i, j] = 1 # become solid because of nucleation
+#                    print "ANGLE = ", ANGLE[i,j]
+                NUCIDX[i,j] = _NUCINC # the NUCINCth grain
+                DTSQ = min((_Temp_Liquid - TempInterpolateT[i,j])**2, DTSQLIM)
+                Vtip = .729*DTSQ + .0103 * DTSQ**2
+                TIPLEN[i,j] = -1*Vtip * DTIME / math.sqrt(2.0)
+                    
+        
+    
     for i in xrange(m_min + 1, m_max - 1):
         for j in xrange(n_min + 1, n_max - 1):
             if AIR[i, j] == 1:
@@ -839,14 +884,15 @@ for i in xrange(TempFileNumber_start, TempFileNumber): # provide temperature fil
                 remelt_grain_idx2 = np.argwhere((TempInterpolateT <= TempLiquid) & (CLASS == -1)) # obtain un-solidified cell index.
     #            remelt_grain_idx1 = np.argwhere(((SIDX == 1) | (SIDX == 2) | (SIDX == 3)) & (TempInterpolateT > TempADJ))
     #            remelt_grain_idx1 = np.argwhere(((SIDX == 1) | (SIDX == 2) | (SIDX == 3)) & (TempInterpolateT > TempADJ) & (TempInterpolateT > TempInterpolate_Old)) # obtain remelt grain index.
-                REMELT[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]], REMELT[remelt_grain_idx2[:, 0], remelt_grain_idx2[:, 1]] = 1, 0
+                REMELT[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]], REMELT[remelt_grain_idx2[:, 0], remelt_grain_idx2[:, 1]] = 1, 2 # to solve remelting cells donot solidify again. 10182017 changed.
                 CLASS2[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] # 10102017 added
                 CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = -1
                 SIDX[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0
+                SIDX[remelt_grain_idx2[:, 0], remelt_grain_idx2[:, 1]] = 0  # to solve remelting cells donot solidify again. 10182017 changed.
                 NUCIDX[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0
                 re_center[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = -1 #??? 04282017 revise
                 LenCritical[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = -1 #??? 04292017 revise. if it is liquid, it is -1.\
-                del remelt_grain_idx1
+                del remelt_grain_idx1, remelt_grain_idx2 # 10182017 changed.
 #==============================================================================
 #             STOP[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 09252017 revised. 0 indicates that this cell can grow because of no overgrowth.
 #==============================================================================
