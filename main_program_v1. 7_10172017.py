@@ -75,6 +75,7 @@ LenCritical = np.zeros((RowNum,ColumnNum), dtype='int32')
 re_center = np.zeros((RowNum,ColumnNum), dtype='int32')
 REMELT = np.zeros((RowNum,ColumnNum), dtype='int32')
 AIR = np.zeros((RowNum,ColumnNum), dtype='int32') # 1 represents it is air.
+#background = np.ones((RowNum,ColumnNum), dtype='int32') # 1 represents it is default background flag. 10222017 added.
 """********************************"""
 TempInterpolate_Old = np.full((RowNum,ColumnNum), TempLiquid, dtype='float16')
 NUCINC, NUC, growth_count, nucleat_count = 0, 0, 0, 0
@@ -283,31 +284,32 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                     TIPLEN[ii[0], ii[1]] = -1*Vtip * DTIME / math.sqrt(2.0)
                 else:
                     DTNUCL[ii[0],ii[1]] = 0 # The cell won't nucleat
+                    
+            if CLASS[ii[0], ii[1] + 1] > 0 or CLASS[ii[0], ii[1] - 1] > 0 or CLASS[ii[0] + 1, ii[1]] > 0 or CLASS[ii[0] - 1, ii[1]] > 0 or CLASS[ii[0] + 1, ii[1] + 1] > 0 or CLASS[ii[0] - 1, ii[1] + 1] > 0 or CLASS[ii[0] + 1, ii[1] - 1] > 0 or CLASS[ii[0] - 1, ii[1] - 1] > 0:
+                PS_remelt = 1e-4 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                if r_remelt <= PS_remelt:
+                    DTNUCL[ii[0], ii[1]] = 5 # it nucleats at the S/L surface
+                    NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
+                    _NUCINC = int(0 if _NUCINC is None else _NUCINC)
+                    _NUCINC += 1 # Record how many nucleations
+                    CLASS[ii[0], ii[1]] = random.randint(0,49)
 #==============================================================================
-#             if CLASS[ii[0], ii[1] + 1] > 0 or CLASS[ii[0], ii[1] - 1] > 0 or CLASS[ii[0] + 1, ii[1]] > 0 or CLASS[ii[0] - 1, ii[1]] > 0 or CLASS[ii[0] + 1, ii[1] + 1] > 0 or CLASS[ii[0] - 1, ii[1] + 1] > 0 or CLASS[ii[0] + 1, ii[1] - 1] > 0 or CLASS[ii[0] - 1, ii[1] - 1] > 0:
-#                 PS_remelt = 0.05 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
-#                 if r_remelt <= PS_remelt:
-#                     DTNUCL[ii[0], ii[1]] = 5 # it nucleats at the S/L surface
-#                     NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
-#                     _NUCINC = int(0 if _NUCINC is None else _NUCINC)
-#                     _NUCINC += 1 # Record how many nucleations
-#                     CLASS[ii[0], ii[1]] = random.randint(0,49)
 #     #                    CLASS[i, j] = CLASS2[i, j] if  CLASS2[i, j] > 0 else CLASS[i,j] # 10102017 added
 #                     a = [CLASS[ii[0] + 1, ii[1]], CLASS[ii[0] - 1, ii[1]], CLASS[ii[0], ii[1] + 1], CLASS[ii[0], ii[1] - 1]]               
 #                     CLASS_interface = a[min(range(len(a)), key=lambda i: abs(a[i] - Class_mean))] # prescribe the CLASS of interface cell when nucleation. This is to look for which neighbouring cell is solid. find i where abs(a[i] - Class_mean) is minimum. min() returns a number within range(len(a)). simulate epitaxial growth.
 #                     if CLASS_interface > 0:
 #                         CLASS[ii[0], ii[1]] =  CLASS_interface
-#     #                    print "CLASS[{0},{1}] = ".format(i, j), CLASS[i, j], ", which is formed in the Nucleation surface."
-#                     ANGLE[ii[0], ii[1]] = (CLASS[ii[0], ii[1]]*90/48.0 - 45) * PI / 180.0
-#                     SIDX[ii[0], ii[1]] = 1 # become solid because of nucleation
-#     #                    print "ANGLE = ", ANGLE[i,j]
-#                     NUCIDX[ii[0], ii[1]] = _NUCINC # the NUCINCth grain
-#                     DTSQ = min((_Temp_Liquid - TempInterpolateT[ii[0], ii[1]])**2, DTSQLIM)
-#                     Vtip = .729*DTSQ + .0103 * DTSQ**2
-#                     TIPLEN[ii[0], ii[1]] = -1*Vtip * DTIME / math.sqrt(2.0)
-#                 else:
-#                     DTNUCL[ii[0], ii[1]] = 0 #The cell won't nucleat                    
 #==============================================================================
+    #                    print "CLASS[{0},{1}] = ".format(i, j), CLASS[i, j], ", which is formed in the Nucleation surface."
+                    ANGLE[ii[0], ii[1]] = (CLASS[ii[0], ii[1]]*90/48.0 - 45) * PI / 180.0
+                    SIDX[ii[0], ii[1]] = 1 # become solid because of nucleation
+    #                    print "ANGLE = ", ANGLE[i,j]
+                    NUCIDX[ii[0], ii[1]] = _NUCINC # the NUCINCth grain
+                    DTSQ = min((_Temp_Liquid - TempInterpolateT[ii[0], ii[1]])**2, DTSQLIM)
+                    Vtip = .729*DTSQ + .0103 * DTSQ**2
+                    TIPLEN[ii[0], ii[1]] = -1*Vtip * DTIME / math.sqrt(2.0)
+                else:
+                    DTNUCL[ii[0], ii[1]] = 0 #The cell won't nucleat                    
         
     
     for i in xrange(m_min + 1, m_max - 1):
@@ -708,7 +710,7 @@ def Growth(_Row_Num,_Column_Num, _Temp_Liquid,_Temp_Solid,temp_seq):
         part_cells_class = CLASS[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1] # a rectangle determined by polygon vertices, x_min, x_max, y_min, y_max.
         liquid_idx = np.argwhere(part_cells_class == -1) # index of all liquid cells within part_cells_class.
         Quadrilateral = path.Path([(X1[i], Y1[i]), (X2[i], Y2[i]), (X3[i], Y3[i]), (X4[i], Y4[i])])
-        
+#        background_idx = np.argwhere(background == 1) # 10222017 added.
         # Quadrilateral = Polygon(Point(X1[i], Y1[i]), Point(X2[i], Y2[i]), Point(X3[i], Y3[i]), Point(X4[i], Y4[i]))
         liquid_idx_global = liquid_idx + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (len(liquid_idx), 1)) # liquid_idx_global is all global index of liquid cells within part_cells_class domain.
         liquid_coord_local = SDX * (liquid_idx_global - np.tile(critical_len_idx[i], (len(liquid_idx), 1))) # liquid_coord_local is local x and y coordinates of all liquid cells within part_cells_class domain.
@@ -895,6 +897,11 @@ for i in xrange(TempFileNumber_start, TempFileNumber): # provide temperature fil
     #            remelt_grain_idx1 = np.argwhere(((SIDX == 1) | (SIDX == 2) | (SIDX == 3)) & (TempInterpolateT > TempADJ))
     #            remelt_grain_idx1 = np.argwhere(((SIDX == 1) | (SIDX == 2) | (SIDX == 3)) & (TempInterpolateT > TempADJ) & (TempInterpolateT > TempInterpolate_Old)) # obtain remelt grain index.
                 REMELT[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]], REMELT[remelt_grain_idx2[:, 0], remelt_grain_idx2[:, 1]] = 1, 2 # to solve remelting cells donot solidify again. 10182017 changed.
+                DTNUCL[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                LIDXN1[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                TIPLEN[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                EnclosePoint[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = False # 10232017 added.
+                
                 CLASS2[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] # 10102017 added
                 CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = -1
                 SIDX[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0
