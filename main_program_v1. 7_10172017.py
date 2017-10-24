@@ -286,7 +286,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                     DTNUCL[ii[0],ii[1]] = 0 # The cell won't nucleat
                     
             if CLASS[ii[0], ii[1] + 1] > 0 or CLASS[ii[0], ii[1] - 1] > 0 or CLASS[ii[0] + 1, ii[1]] > 0 or CLASS[ii[0] - 1, ii[1]] > 0 or CLASS[ii[0] + 1, ii[1] + 1] > 0 or CLASS[ii[0] - 1, ii[1] + 1] > 0 or CLASS[ii[0] + 1, ii[1] - 1] > 0 or CLASS[ii[0] - 1, ii[1] - 1] > 0:
-                PS_remelt = 1e-4 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                PS_remelt = 2e-4 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
                 if r_remelt <= PS_remelt:
                     DTNUCL[ii[0], ii[1]] = 5 # it nucleats at the S/L surface
                     NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
@@ -901,6 +901,11 @@ for i in xrange(TempFileNumber_start, TempFileNumber): # provide temperature fil
                 LIDXN1[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
                 TIPLEN[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
                 EnclosePoint[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = False # 10232017 added.
+                TIPLEN1[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                TIPLEN2[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                TIPLEN3[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                TIPLEN4[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
+                STOP[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = 0 # 10232017 added.
                 
                 CLASS2[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] # 10102017 added
                 CLASS[remelt_grain_idx1[:, 0], remelt_grain_idx1[:, 1]] = -1
