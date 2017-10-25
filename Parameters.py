@@ -171,7 +171,7 @@ TempMelt = 1900.0
 #TempSolid = 1277.0 # it should be 1377.0
 #TempMelt = 1300.0 # it should be 1400
 DTSQLIM = (TempLiquid - TempSolid)**2 
-MicroTime = 1 # one temperature file at temporal dimension in FEA corresponds to MicroTime temperature files in CA 
+MicroTime = 5 # one temperature file at temporal dimension in FEA corresponds to MicroTime temperature files in CA 
 #PV = .1
 #PS = .05
 #NUCFLG = 0
@@ -201,7 +201,7 @@ critical_value1 = 60
 critical_value2 = 80
 critical_value3 = 100
 critical_value4 = 110
-critical_CET = 100 # Control CET size.
+critical_CET = 120 # Control CET size.
 """2D range"""
 row_min1 = 550
 row_max1 = 583

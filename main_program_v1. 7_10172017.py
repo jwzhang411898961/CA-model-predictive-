@@ -706,44 +706,46 @@ def Growth(_Row_Num,_Column_Num, _Temp_Liquid,_Temp_Solid,temp_seq):
             re_center[i[0], i[1]] = 0
 
     """enclose the neighbor cells and change their states."""
-    for i in range(len(X_MIN)): # ith nucleated grain.
-        part_cells_class = CLASS[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1] # a rectangle determined by polygon vertices, x_min, x_max, y_min, y_max.
-#        print part_cells_class
-        liquid_idx = np.argwhere(part_cells_class == -1) # index of all liquid cells within part_cells_class.
-        Quadrilateral = path.Path([(X1[i], Y1[i]), (X2[i], Y2[i]), (X3[i], Y3[i]), (X4[i], Y4[i])])
-        
-        
-        """prevent overlapping. 10242017 added"""
-        part_background = background[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1]
-        background_idx = np.argwhere(part_background == 1) + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (part_background.size, 1))[0] # background_idx is global index of part_background == 1
-        background_coord_local = SDX * (background_idx - np.tile(critical_len_idx[i], (len(background_idx), 1))) # background_coord_local is local x and y coordinates of all part_background == 1 cells.
-        background_coord_tuple = totuple(background_coord_local)
-        if background_coord_tuple[0] == ():
-            continue
-        EnclosePoint_back = Quadrilateral.contains_points(background_coord_tuple).reshape(X_MAX[i] + 1 - X_MIN[i],Y_MAX[i] + 1 - Y_MIN[i])
-        enclose_back_idx = np.argwhere(EnclosePoint_back == True)
-        CLASS_unique = np.unique(CLASS[background_idx[enclose_back_idx[:, 0], 0], background_idx[enclose_back_idx[:, 0], 1]]) # unique element in the CLASS
-        if len(CLASS_unique) > 3: # within one polygon, there are at most two orientation grain.
-            continue
-        
-        
-        # Quadrilateral = Polygon(Point(X1[i], Y1[i]), Point(X2[i], Y2[i]), Point(X3[i], Y3[i]), Point(X4[i], Y4[i]))
-        liquid_idx_global = liquid_idx + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (len(liquid_idx), 1)) # liquid_idx_global is all global index of liquid cells within part_cells_class domain.
-        liquid_coord_local = SDX * (liquid_idx_global - np.tile(critical_len_idx[i], (len(liquid_idx), 1))) # liquid_coord_local is local x and y coordinates of all liquid cells within part_cells_class domain.
-        liquid_coord_tuple = totuple(liquid_coord_local)
-        if liquid_coord_tuple[0] == ():
-            continue
-        EnclosePoint = Quadrilateral.contains_points(liquid_coord_tuple[0]) # boolean numpy . when it is true, it means it is enclosed by this grain polygon.
-        enclose_idx = np.argwhere(EnclosePoint == True) # index of "True" value in  EnclosePoint. However, keep in mind that this index is not global index!!!
-        print 'CLASS[{0}, {1}] is {2}'.format(critical_len_idx[i, 0], critical_len_idx[i, 1], CLASS[critical_len_idx[i, 0], critical_len_idx[i, 1]])
-        CLASS[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = CLASS[critical_len_idx[i, 0], critical_len_idx[i, 1]] # this index is pretty important. liquid_idx_global is (1L, len(critical_len_idx), 2L) size. enclose_idx[:, 0] is used to select part of len(critical_len_idx).
-        REMELT_index = np.argwhere(CLASS2 > 0) # 10102017 added. make sure remelted grain keeps its original orientation
-        CLASS[REMELT_index[:, 0], REMELT_index[:, 1]] = CLASS2[REMELT_index[:, 0], REMELT_index[:, 1]] # 10102017 added. make sure remelted grain keeps its original orientation
-        NUCIDX[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = NUCIDX[critical_len_idx[i, 0], critical_len_idx[i, 1]]
-        ANGLE[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = ANGLE[critical_len_idx[i, 0], critical_len_idx[i, 1]]
-        SIDX[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = 2 # become solid because of growth
-        STOP[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = 1 # it won't grow again within this time step. It may be useless under current code.
-        EnclosePoint.fill(False) # avoid all the grains have the same CLASS value.
+#==============================================================================
+#     for i in range(len(X_MIN)): # ith nucleated grain.
+#         part_cells_class = CLASS[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1] # a rectangle determined by polygon vertices, x_min, x_max, y_min, y_max.
+# #        print part_cells_class
+#         liquid_idx = np.argwhere(part_cells_class == -1) # index of all liquid cells within part_cells_class.
+#         Quadrilateral = path.Path([(X1[i], Y1[i]), (X2[i], Y2[i]), (X3[i], Y3[i]), (X4[i], Y4[i])])
+#         
+#         
+#         """prevent overlapping. 10242017 added"""
+#         part_background = background[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1]
+#         background_idx = np.argwhere(part_background == 1) + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (part_background.size, 1))[0] # background_idx is global index of part_background == 1
+#         background_coord_local = SDX * (background_idx - np.tile(critical_len_idx[i], (len(background_idx), 1))) # background_coord_local is local x and y coordinates of all part_background == 1 cells.
+#         background_coord_tuple = totuple(background_coord_local)
+#         if background_coord_tuple[0] == ():
+#             continue
+#         EnclosePoint_back = Quadrilateral.contains_points(background_coord_tuple).reshape(X_MAX[i] + 1 - X_MIN[i],Y_MAX[i] + 1 - Y_MIN[i])
+#         enclose_back_idx = np.argwhere(EnclosePoint_back == True)
+#         CLASS_unique = np.unique(CLASS[background_idx[enclose_back_idx[:, 0], 0], background_idx[enclose_back_idx[:, 0], 1]]) # unique element in the CLASS
+#         if len(CLASS_unique) > 3: # within one polygon, there are at most two orientation grain.
+#             continue
+#         
+#         
+#         # Quadrilateral = Polygon(Point(X1[i], Y1[i]), Point(X2[i], Y2[i]), Point(X3[i], Y3[i]), Point(X4[i], Y4[i]))
+#         liquid_idx_global = liquid_idx + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (len(liquid_idx), 1)) # liquid_idx_global is all global index of liquid cells within part_cells_class domain.
+#         liquid_coord_local = SDX * (liquid_idx_global - np.tile(critical_len_idx[i], (len(liquid_idx), 1))) # liquid_coord_local is local x and y coordinates of all liquid cells within part_cells_class domain.
+#         liquid_coord_tuple = totuple(liquid_coord_local)
+#         if liquid_coord_tuple[0] == ():
+#             continue
+#         EnclosePoint = Quadrilateral.contains_points(liquid_coord_tuple[0]) # boolean numpy . when it is true, it means it is enclosed by this grain polygon.
+#         enclose_idx = np.argwhere(EnclosePoint == True) # index of "True" value in  EnclosePoint. However, keep in mind that this index is not global index!!!
+#         print 'CLASS[{0}, {1}] is {2}'.format(critical_len_idx[i, 0], critical_len_idx[i, 1], CLASS[critical_len_idx[i, 0], critical_len_idx[i, 1]])
+#         CLASS[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = CLASS[critical_len_idx[i, 0], critical_len_idx[i, 1]] # this index is pretty important. liquid_idx_global is (1L, len(critical_len_idx), 2L) size. enclose_idx[:, 0] is used to select part of len(critical_len_idx).
+#         REMELT_index = np.argwhere(CLASS2 > 0) # 10102017 added. make sure remelted grain keeps its original orientation
+#         CLASS[REMELT_index[:, 0], REMELT_index[:, 1]] = CLASS2[REMELT_index[:, 0], REMELT_index[:, 1]] # 10102017 added. make sure remelted grain keeps its original orientation
+#         NUCIDX[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = NUCIDX[critical_len_idx[i, 0], critical_len_idx[i, 1]]
+#         ANGLE[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = ANGLE[critical_len_idx[i, 0], critical_len_idx[i, 1]]
+#         SIDX[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = 2 # become solid because of growth
+#         STOP[liquid_idx_global[:,enclose_idx[:, 0],0], liquid_idx_global[:,enclose_idx[:, 0],1]] = 1 # it won't grow again within this time step. It may be useless under current code.
+#         EnclosePoint.fill(False) # avoid all the grains have the same CLASS value.
+#==============================================================================
    
      
 
