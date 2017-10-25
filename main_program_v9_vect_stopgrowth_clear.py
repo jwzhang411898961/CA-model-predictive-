@@ -230,7 +230,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
             """
             r = abs(math.sin(random.random()))
             if TempInterpolateT[i,j] > _TempADJ and TempInterpolateT[i + 1,j] > _TempADJ and TempInterpolateT[i - 1,j] > _TempADJ and TempInterpolateT[i,j + 1] > _TempADJ and TempInterpolateT[i,j - 1] > _TempADJ: # represents four neighbours and itself are all above TempLQD
-                PV = Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, 1.32, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                PV = 0.1 * Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, 1.32, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
                 CLASS_block = CLASS[i - 3:i + 3, j - 3:j + 3] # two nucleation center cannot be too close. The distance is at least 6 cell. 
                 if r <= PV and np.all(CLASS_block == -1):
                     DTNUCL[i,j] = 10 # it nucleats in the bulk liquid.
@@ -250,7 +250,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                 else:
                     DTNUCL[i,j] = 0
             if TempInterpolateT[i,j] > _TempADJ and (TempInterpolateT[i + 1,j] < _TempADJ or TempInterpolateT[i - 1,j] < _TempADJ or TempInterpolateT[i,j + 1] < _TempADJ or TempInterpolateT[i,j - 1] < _TempADJ): # represents at least one neighbour is lower than TempLQD
-                PS = Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                PS = 0.1 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
                 if r <= PS:
                     DTNUCL[i,j] = 5 # it nucleats at the S/L surface
                     print "**********************************************"
@@ -360,7 +360,7 @@ def Growth(_Row_Num,_Column_Num, _Temp_Liquid,_Temp_Solid):
             else: # control the growth of nucleated cells whose length is shorter than critical length Len0. doesn't control the growth of nucleated cells whose length is longer than critical length Len0. 05192017
                 DTSQ = min((_Temp_Liquid - TempInterpolateT[i[0], i[1]])**2, DTSQLIM)
                 Vtip = .729*DTSQ + .0103 * DTSQ**2
-                TIPLEN[i[0], i[1]] = TIPLEN[i[0], i[1]] + Vtip * DTIME / math.sqrt(2.0)
+                TIPLEN[i[0], i[1]] = TIPLEN[i[0], i[1]] + 3 * Vtip * DTIME / math.sqrt(2.0)
                 """in order to reduce computational cost, make it invalid temporarily."""
                 TIPLEN1[i[0], i[1]] = TIPLEN2[i[0], i[1]] = TIPLEN3[i[0], i[1]] = TIPLEN4[i[0], i[1]] = TIPLEN[i[0], i[1]]
         else:
