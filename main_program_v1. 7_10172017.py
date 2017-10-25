@@ -75,7 +75,7 @@ LenCritical = np.zeros((RowNum,ColumnNum), dtype='int32')
 re_center = np.zeros((RowNum,ColumnNum), dtype='int32')
 REMELT = np.zeros((RowNum,ColumnNum), dtype='int32')
 AIR = np.zeros((RowNum,ColumnNum), dtype='int32') # 1 represents it is air.
-#background = np.ones((RowNum,ColumnNum), dtype='int32') # 1 represents it is default background flag. 10222017 added.
+background = np.ones((RowNum,ColumnNum), dtype='int32') # 1 represents it is default background flag. 10222017 added.
 """********************************"""
 TempInterpolate_Old = np.full((RowNum,ColumnNum), TempLiquid, dtype='float16')
 NUCINC, NUC, growth_count, nucleat_count = 0, 0, 0, 0
@@ -267,7 +267,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                 continue
             r_remelt = abs(math.sin(random.random()))
             if CLASS[ii[0], ii[1] + 1] == -1 and CLASS[ii[0], ii[1] - 1] == -1 and CLASS[ii[0] + 1, ii[1]] == -1 and CLASS[ii[0] - 1, ii[1]] == -1 and CLASS[ii[0] + 1, ii[1] + 1] == -1 and CLASS[ii[0] - 1, ii[1] + 1] == -1 and CLASS[ii[0] + 1, ii[1] - 1] == -1 and CLASS[ii[0] - 1, ii[1] - 1] == -1:
-                PV_remelt = 2e-6 * Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_v, (_Temp_Liquid - TempInterpolateT[ii[0], ii[1]])/Integral_coefficient_v, 1.32, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                PV_remelt = 1e-6 * Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_v, (_Temp_Liquid - TempInterpolateT[ii[0], ii[1]])/Integral_coefficient_v, 1.32, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
                 CLASS_block = CLASS[ii[0] - 3:ii[0] + 3, ii[1] - 3:ii[1] + 3] # two nucleation center cannot be too close. The distance is at least 6 cell.
                 if r_remelt <= PV_remelt and np.all(CLASS_block == -1):
                     DTNUCL[ii[0], ii[1]] = 10 # it nucleats in the bulk liquid.
@@ -286,7 +286,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                     DTNUCL[ii[0],ii[1]] = 0 # The cell won't nucleat
                     
             if CLASS[ii[0], ii[1] + 1] > 0 or CLASS[ii[0], ii[1] - 1] > 0 or CLASS[ii[0] + 1, ii[1]] > 0 or CLASS[ii[0] - 1, ii[1]] > 0 or CLASS[ii[0] + 1, ii[1] + 1] > 0 or CLASS[ii[0] - 1, ii[1] + 1] > 0 or CLASS[ii[0] + 1, ii[1] - 1] > 0 or CLASS[ii[0] - 1, ii[1] - 1] > 0:
-                PS_remelt = 2e-4 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
+                PS_remelt = 1e-3 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[ii[0], ii[1]])/Integral_coefficient_s, (_Temp_Liquid - TempInterpolateT[ii[0],ii[1]])/Integral_coefficient_s, .5, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats
                 if r_remelt <= PS_remelt:
                     DTNUCL[ii[0], ii[1]] = 5 # it nucleats at the S/L surface
                     NUCFLG = 1 # 1 represents there is at least one nucleation for this time step.
@@ -708,9 +708,25 @@ def Growth(_Row_Num,_Column_Num, _Temp_Liquid,_Temp_Solid,temp_seq):
     """enclose the neighbor cells and change their states."""
     for i in range(len(X_MIN)): # ith nucleated grain.
         part_cells_class = CLASS[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1] # a rectangle determined by polygon vertices, x_min, x_max, y_min, y_max.
+#        print part_cells_class
         liquid_idx = np.argwhere(part_cells_class == -1) # index of all liquid cells within part_cells_class.
         Quadrilateral = path.Path([(X1[i], Y1[i]), (X2[i], Y2[i]), (X3[i], Y3[i]), (X4[i], Y4[i])])
-#        background_idx = np.argwhere(background == 1) # 10222017 added.
+        
+        
+        """prevent overlapping. 10242017 added"""
+        part_background = background[X_MIN[i]:X_MAX[i] + 1, Y_MIN[i]:Y_MAX[i] + 1]
+        background_idx = np.argwhere(part_background == 1) + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (part_background.size, 1))[0] # background_idx is global index of part_background == 1
+        background_coord_local = SDX * (background_idx - np.tile(critical_len_idx[i], (len(background_idx), 1))) # background_coord_local is local x and y coordinates of all part_background == 1 cells.
+        background_coord_tuple = totuple(background_coord_local)
+        if background_coord_tuple[0] == ():
+            continue
+        EnclosePoint_back = Quadrilateral.contains_points(background_coord_tuple).reshape(X_MAX[i] + 1 - X_MIN[i],Y_MAX[i] + 1 - Y_MIN[i])
+        enclose_back_idx = np.argwhere(EnclosePoint_back == True)
+        CLASS_unique = np.unique(CLASS[background_idx[enclose_back_idx[:, 0], 0], background_idx[enclose_back_idx[:, 0], 1]]) # unique element in the CLASS
+        if len(CLASS_unique) > 3: # within one polygon, there are at most two orientation grain.
+            continue
+        
+        
         # Quadrilateral = Polygon(Point(X1[i], Y1[i]), Point(X2[i], Y2[i]), Point(X3[i], Y3[i]), Point(X4[i], Y4[i]))
         liquid_idx_global = liquid_idx + np.tile(np.dstack([X_MIN[i],Y_MIN[i]]), (len(liquid_idx), 1)) # liquid_idx_global is all global index of liquid cells within part_cells_class domain.
         liquid_coord_local = SDX * (liquid_idx_global - np.tile(critical_len_idx[i], (len(liquid_idx), 1))) # liquid_coord_local is local x and y coordinates of all liquid cells within part_cells_class domain.
