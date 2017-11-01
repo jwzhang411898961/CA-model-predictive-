@@ -230,7 +230,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
             """
             r = abs(math.sin(random.random()))
             if TempInterpolateT[i,j] > _TempADJ and TempInterpolateT[i + 1,j] > _TempADJ and TempInterpolateT[i - 1,j] > _TempADJ and TempInterpolateT[i,j + 1] > _TempADJ and TempInterpolateT[i,j - 1] > _TempADJ: # represents four neighbours and itself are all above TempLQD
-                PV = 2 * Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, 0.33, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats. The original values are 1.32, .1, 1, which works well.
+                PV = 2 * Fv_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, 0.66, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats. The original values are 1.32, .1, 1, which works well.
                 CLASS_block = CLASS[i - 3:i + 3, j - 3:j + 3] # two nucleation center cannot be too close. The distance is at least 6 cell. 
                 if r <= PV and np.all(CLASS_block == -1):
                     DTNUCL[i,j] = 10 # it nucleats in the bulk liquid.
@@ -250,7 +250,7 @@ def Nucleation(_Row_Num,_Column_Num,_Temp_Liquid, _Temp_Solid, _UnderCoolMean, _
                 else:
                     DTNUCL[i,j] = 0
             if TempInterpolateT[i,j] > _TempADJ and (TempInterpolateT[i + 1,j] < _TempADJ or TempInterpolateT[i - 1,j] < _TempADJ or TempInterpolateT[i,j + 1] < _TempADJ or TempInterpolateT[i,j - 1] < _TempADJ): # represents at least one neighbour is lower than TempLQD
-                PS = 30 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, .125, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats. The original values are 0.5, .1, 1, which works well.
+                PS = 30 * Fs_gaussian_nuc * gaussian_int((_Temp_Liquid - TempInterpolate_Old[i,j])/Integral_coefficient, (_Temp_Liquid - TempInterpolateT[i,j])/Integral_coefficient, .25, .1, 1)[0] / _Row_Num / _Column_Num # it nucleats. The original values are 0.5, .1, 1, which works well.
                 if r <= PS:
                     DTNUCL[i,j] = 5 # it nucleats at the S/L surface
                     print "**********************************************"
